@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biometric Sync</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root {
+  --bg:#f0f2f5; --surface:#fff; --border:#e2e5ea; --text:#111827; --muted:#6b7280;
+  --accent:#1d4ed8; --accent2:#1e40af; --green:#16a34a; --green-bg:#dcfce7;
+  --red:#dc2626; --red-bg:#fee2e2; --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+
+/* Header */
+header{background:var(--text);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:600;font-size:15px;letter-spacing:-.02em}
+.brand-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.header-right{display:flex;align-items:center;gap:10px}
+
+/* Device switcher */
+.device-switcher{display:flex;align-items:center;gap:8px;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:5px 12px 5px 10px;cursor:pointer;color:#e5e7eb;font-size:12px;transition:background .15s;position:relative}
+.device-switcher:hover{background:#374151}
+.device-switcher .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:blink 2s infinite}
+.device-switcher .name{font-family:var(--mono);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.device-switcher .chevron{color:#9ca3af;font-size:10px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Dropdown */
+.dropdown{position:absolute;top:calc(100% + 8px);left:0;min-width:280px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;display:none;overflow:hidden}
+.dropdown.open{display:block}
+.dropdown-header{padding:10px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-bottom:1px solid var(--border);background:#f9fafb}
+.device-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background .1s;border-bottom:1px solid #f3f4f6}
+.device-item:last-child{border-bottom:none}
+.device-item:hover{background:#f9fafb}
+.device-item.active{background:#eff6ff}
+.device-item .di-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;flex-shrink:0}
+.device-item.active .di-dot{background:var(--green)}
+.device-item .di-info{flex:1;min-width:0}
+.device-item .di-name{font-weight:500;font-size:13px}
+.device-item .di-ip{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.device-actions{display:flex;gap:4px;flex-shrink:0}
+.di-btn{color:var(--muted);font-size:12px;padding:3px 7px;border-radius:5px;border:none;background:none;cursor:pointer;line-height:1}
+.di-btn:hover.edit{color:var(--accent);background:#dbeafe}
+.di-btn:hover.remove{color:var(--red);background:var(--red-bg)}
+
+.btn-add-device{display:flex;align-items:center;gap:6px;background:#fff;color:var(--text);border:none;border-radius:7px;padding:6px 12px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-add-device:hover{background:#f3f4f6}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:420px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.modal .sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.modal-fields{display:flex;flex-direction:column;gap:14px;margin-bottom:20px}
+.modal-field{display:flex;flex-direction:column;gap:5px}
+.modal-field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal-field input{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:13px;color:var(--text);transition:border-color .15s;width:100%}
+.modal-field input:focus{outline:none;border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* Layout */
+main{max-width:1100px;margin:0 auto;padding:28px 24px}
+.active-device-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;font-size:13px}
+.adb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.adb-label{color:var(--muted);font-size:12px}
+.adb-name{font-weight:600}
+.adb-ip{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.stat .label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.stat .val{font-size:26px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.stat .sub{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* Panels */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-head h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ph-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.ph-icon.blue{background:#dbeafe}
+.ph-icon.green{background:var(--green-bg)}
+.panel-body{padding:20px}
+
+/* Forms */
+.row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px}
+.field label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input[type="datetime-local"]{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--text);transition:border-color .15s;width:100%}
+.field input:focus{outline:none;border-color:var(--accent)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn.success{background:var(--green);border-color:var(--green);color:#fff}
+.btn.success:hover{background:#15803d}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+.spinning .spin{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:500;display:none}
+.toast.ok{background:var(--green-bg);color:var(--green);border:1px solid #bbf7d0}
+.toast.err{background:var(--red-bg);color:var(--red);border:1px solid #fecaca}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;padding:9px 14px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1.5px solid var(--border);background:var(--bg);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f3f4f6;font-family:var(--mono);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;font-family:var(--sans)}
+.badge.yes{background:var(--green-bg);color:var(--green)}
+.badge.no{background:var(--red-bg);color:var(--red)}
+.pag{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.pag .btn{padding:5px 12px;font-size:12px}
+.pag .info{margin-left:auto}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .icon{font-size:36px;margin-bottom:10px}
+.empty p{font-size:13px}
+.progress-wrap{margin-top:14px;display:none}
+.prog-label{font-size:11px;color:var(--muted);margin-bottom:6px}
+.progress-bar{height:4px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:4px;animation:indeterminate 1.5s infinite}
+@keyframes indeterminate{0%{margin-left:-30%;width:30%}100%{margin-left:100%;width:30%}}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}header{padding:0 16px}main{padding:16px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><div class="brand-icon">🔐</div>Biometric Sync</div>
+  <div class="header-right">
+    <div class="device-switcher" id="device-switcher" onclick="toggleDropdown()">
+      <span class="dot"></span>
+      <span class="name" id="active-device-name">No device</span>
+      <span class="chevron">▼</span>
+      <div class="dropdown" id="device-dropdown">
+        <div class="dropdown-header">Switch Device</div>
+        <div id="device-list"></div>
+      </div>
+    </div>
+    <button class="btn-add-device" onclick="openModal()">＋ Add Device</button>
+  </div>
+</header>
+
+<!-- Add / Edit Device Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h3 id="modal-title">Add New Device</h3>
+    <p class="sub" id="modal-sub">Enter the details of the face biometric device.</p>
+    <input type="hidden" id="edit-id" />
+    <div class="modal-fields">
+      <div class="modal-field"><label>Device Name</label><input type="text" id="new-name" placeholder="e.g. Main Entrance" /></div>
+      <div class="modal-field"><label>IP Address</label><input type="text" id="new-ip" placeholder="e.g. 10.30.0.101" /></div>
+      <div class="modal-field"><label>Port</label><input type="text" id="new-port" placeholder="80" value="80" /></div>
+      <div class="modal-field"><label>Username</label><input type="text" id="new-user" placeholder="admin" value="admin" /></div>
+      <div class="modal-field">
+        <label>Password <span id="pass-hint" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;"></span></label>
+        <input type="password" id="new-pass" placeholder="Enter device password" />
+      </div>
+    </div>
+    <div id="modal-toast" class="toast" style="margin-bottom:14px;margin-top:0;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" id="btn-save-device" onclick="saveDevice()">Add Device</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="active-device-bar">
+    <span class="adb-dot"></span>
+    <span class="adb-label">Active device:</span>
+    <span class="adb-name" id="bar-name">—</span>
+    <span class="adb-ip" id="bar-ip"></span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">Device Status</div><div class="val" id="stat-status" style="font-size:14px;margin-top:4px;"><span class="badge yes">● Online</span></div></div>
+    <div class="stat"><div class="label">Last Sync</div><div class="val" id="stat-lastsync" style="font-size:13px;">—</div></div>
+    <div class="stat"><div class="label">Stored Records</div><div class="val" id="stat-count">—</div><div class="sub">on disk</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2><span class="ph-icon blue">📥</span>Download from Device</h2></div>
+    <div class="panel-body">
+      <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Fetch records directly from the selected device. This will <strong>replace</strong> all currently stored logs for this device.</p>
+      <div class="row">
+        <div class="field"><label>From</label><input type="datetime-local" id="fetch-from"></div>
+        <div class="field"><label>To</label><input type="datetime-local" id="fetch-to"></div>
+        <button class="btn primary" id="btn-fetch" onclick="fetchFromDevice()">
+          <div class="spin" id="fetch-spin"></div>
+          <span id="fetch-label">📥 Fetch & Store</span>
+        </button>
+      </div>
+      <div class="progress-wrap" id="fetch-progress"><div class="prog-label">Fetching records from device...</div><div class="progress-bar"><div class="fill"></div></div></div>
+      <div class="toast" id="fetch-toast"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2><span class="ph-icon green">📊</span>Export as CSV</h2></div>
+    <div class="panel-body">
+      <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Export stored logs for this device as a CSV file.</p>
+      <div class="row">
+        <div class="field"><label>From</label><input type="datetime-local" id="dl-from"></div>
+        <div class="field"><label>To</label><input type="datetime-local" id="dl-to"></div>
+        <button class="btn success" onclick="downloadCsv()">⬇ Download CSV</button>
+      </div>
+      <div class="toast" id="dl-toast"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2><span class="ph-icon blue">📋</span>Access Logs</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="clearActiveLogs()" style="color:var(--red);border-color:#fca5a5;">🗑 Clear Logs</button>
+        <button class="btn" onclick="loadLogs(1)">↻ Refresh</button>
+      </div>
+    </div>
+    <!-- Filter bar -->
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fafafa;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Search Name</label>
+        <input type="text" id="filter-name" placeholder="e.g. Juan Dela Cruz" oninput="applyFilters()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--text);width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:110px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Search ID</label>
+        <input type="text" id="filter-id" placeholder="e.g. 123456" oninput="applyFilters()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--text);width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Access</label>
+        <select id="filter-access" onchange="applyFilters()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--text);cursor:pointer;height:36px;">
+          <option value="">All</option>
+          <option value="Yes">Granted</option>
+          <option value="No">Denied</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Date</label>
+        <input type="date" id="filter-date" onchange="applyFilters()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-family:var(--mono);font-size:12px;color:var(--text);height:36px;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">Mask</label>
+        <select id="filter-mask" onchange="applyFilters()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--text);cursor:pointer;height:36px;">
+          <option value="">All</option>
+          <option value="With Mask">With Mask</option>
+          <option value="Without Mask">Without Mask</option>
+        </select>
+      </div>
+      <button class="btn" onclick="clearFilters()" style="align-self:flex-end;height:36px;">✕ Clear</button>
+    </div>
+    <div id="filter-info" style="display:none;padding:7px 16px;font-size:11px;color:#92400e;background:#fffbeb;border-bottom:1px solid #fde68a;">
+      Showing filtered results — <a href="#" onclick="clearFilters();return false;" style="color:var(--accent);">clear filters</a>
+    </div>
+    <div id="logs-body"><div class="empty"><div class="icon">📭</div><p>Loading...</p></div></div>
+    <div class="pag" id="pagination" style="display:none;">
+      <button class="btn" id="btn-prev">← Prev</button>
+      <span id="page-info"></span>
+      <button class="btn" id="btn-next">Next →</button>
+      <span class="info" id="total-info"></span>
+    </div>
+  </div>
+</main>
+
+<script>
+let currentPage = 1;
+const LIMIT = 50;
+
+// ── Device Storage ────────────────────────────────────────────────────────
+function getDevices()  { try{return JSON.parse(localStorage.getItem('bio_devices')||'[]')}catch{return[]} }
+function saveDevices(d){ localStorage.setItem('bio_devices', JSON.stringify(d)) }
+function getActiveId() { return localStorage.getItem('bio_active_id')||null }
+function setActiveId(id){ localStorage.setItem('bio_active_id', id) }
+function getActiveDevice(){ const d=getDevices(),id=getActiveId(); return d.find(x=>x.id===id)||d[0]||null }
+
+function renderDeviceList() {
+  const devs   = getDevices();
+  const active = getActiveDevice();
+  const list   = document.getElementById('device-list');
+
+  if (!devs.length) {
+    list.innerHTML = `<div style="padding:14px;font-size:12px;color:var(--muted);text-align:center;">No devices — click Add Device</div>`;
+    document.getElementById('active-device-name').textContent = 'No device';
+    document.getElementById('bar-name').textContent = '—';
+    document.getElementById('bar-ip').textContent = '';
+    return;
+  }
+
+  list.innerHTML = devs.map(d => `
+    <div class="device-item ${active?.id===d.id?'active':''}" onclick="switchDevice('${d.id}')">
+      <span class="di-dot"></span>
+      <div class="di-info">
+        <div class="di-name">${esc(d.name)}</div>
+        <div class="di-ip">${esc(d.ip)}:${esc(d.port||'80')}</div>
+      </div>
+      <div class="device-actions" onclick="event.stopPropagation()">
+        <button class="di-btn edit" onclick="openEditModal('${d.id}')" title="Edit">✏️</button>
+        <button class="di-btn remove" onclick="removeDevice('${d.id}')" title="Remove device">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  if (active) {
+    document.getElementById('active-device-name').textContent = active.name;
+    document.getElementById('bar-name').textContent = active.name;
+    document.getElementById('bar-ip').textContent = `  ${active.ip}:${active.port||80}`;
+  }
+}
+
+function syncActiveToServer() {
+  const dev = getActiveDevice();
+  if (!dev) return;
+  fetch('/api/devices/active', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(dev),
+  });
+}
+
+function switchDevice(id) {
+  setActiveId(id);
+  renderDeviceList();
+  closeDropdown();
+  const dev = getActiveDevice();
+  fetch('/api/devices/active', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(dev),
+  }).then(() => { loadStatus(); loadLogs(1); });
+}
+
+function removeDevice(id) {
+  if (!confirm('Remove this device?')) return;
+  const devs = getDevices().filter(d => d.id !== id);
+  saveDevices(devs);
+  if (getActiveId() === id) {
+    setActiveId(devs[0]?.id || null);
+    syncActiveToServer();
+  }
+  renderDeviceList();
+  loadStatus();
+  loadLogs(1);
+}
+
+// ── Dropdown ──────────────────────────────────────────────────────────────
+function toggleDropdown(){ document.getElementById('device-dropdown').classList.toggle('open') }
+function closeDropdown() { document.getElementById('device-dropdown').classList.remove('open') }
+document.addEventListener('click', e => { if (!document.getElementById('device-switcher').contains(e.target)) closeDropdown() });
+
+// ── Modal (Add / Edit) ────────────────────────────────────────────────────
+let editingId = null;
+
+function openModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add New Device';
+  document.getElementById('modal-sub').textContent   = 'Enter the details of the face biometric device.';
+  document.getElementById('btn-save-device').textContent = 'Add Device';
+  document.getElementById('pass-hint').textContent = '';
+  document.getElementById('edit-id').value = '';
+  ['new-name','new-ip','new-pass'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('new-port').value = '80';
+  document.getElementById('new-user').value = 'admin';
+  document.getElementById('modal-toast').style.display = 'none';
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  closeDropdown();
+  const dev = getDevices().find(d => d.id === id);
+  if (!dev) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Device';
+  document.getElementById('modal-sub').textContent   = 'Update the device details below.';
+  document.getElementById('btn-save-device').textContent = 'Save Changes';
+  document.getElementById('pass-hint').textContent = '(leave blank to keep current)';
+  document.getElementById('edit-id').value  = id;
+  document.getElementById('new-name').value = dev.name || '';
+  document.getElementById('new-ip').value   = dev.ip   || '';
+  document.getElementById('new-port').value = dev.port || '80';
+  document.getElementById('new-user').value = dev.username || 'admin';
+  document.getElementById('new-pass').value = '';
+  document.getElementById('modal-toast').style.display = 'none';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal()      { document.getElementById('modal').classList.remove('open'); editingId = null; }
+function closeModalOutside(e){ if (e.target === document.getElementById('modal')) closeModal(); }
+
+async function saveDevice() {
+  const name = document.getElementById('new-name').value.trim();
+  const ip   = document.getElementById('new-ip').value.trim();
+  const port = document.getElementById('new-port').value.trim() || '80';
+  const user = document.getElementById('new-user').value.trim() || 'admin';
+  const pass = document.getElementById('new-pass').value;
+
+  if (!name || !ip) { showToast('modal-toast', '✗ Name and IP are required', false); return; }
+
+  const btn = document.getElementById('btn-save-device');
+  btn.disabled = true;
+
+  if (editingId) {
+    // Edit existing
+    const devs = getDevices();
+    const idx  = devs.findIndex(d => d.id === editingId);
+    if (idx !== -1) {
+      devs[idx].name     = name;
+      devs[idx].ip       = ip;
+      devs[idx].port     = port;
+      devs[idx].username = user;
+      if (pass) devs[idx].password = pass; // only update if provided
+      saveDevices(devs);
+      if (getActiveId() === editingId) syncActiveToServer();
+      renderDeviceList();
+      closeModal();
+    }
+  } else {
+    // Add new — test connection first
+    btn.textContent = 'Testing connection...';
+    try {
+      const r = await fetch('/api/devices/test', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ ip, port, username: user, password: pass }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || 'Could not connect to device');
+
+      const dev = { id: Date.now().toString(), name, ip, port, username: user, password: pass };
+      const devs = getDevices();
+      devs.push(dev);
+      saveDevices(devs);
+      if (!getActiveId()) { setActiveId(dev.id); syncActiveToServer(); }
+      renderDeviceList();
+      closeModal();
+    } catch (err) {
+      showToast('modal-toast', `✗ ${err.message}`, false);
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = editingId ? 'Save Changes' : 'Add Device';
+}
+
+// ── Status ────────────────────────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const d = await fetch('/api/status').then(r => r.json());
+    document.getElementById('stat-status').innerHTML = `<span class="badge yes">● Online</span>`;
+    document.getElementById('stat-lastsync').textContent = d.lastSync ? new Date(d.lastSync).toLocaleString() : 'Never';
+    document.getElementById('stat-count').textContent = (d.totalLogsLocal||0).toLocaleString();
+  } catch {
+    document.getElementById('stat-status').innerHTML = `<span class="badge no">● Offline</span>`;
+  }
+}
+
+// ── Fetch from Device ─────────────────────────────────────────────────────
+async function fetchFromDevice() {
+  const from = document.getElementById('fetch-from').value;
+  const to   = document.getElementById('fetch-to').value;
+  if (!from||!to) { showToast('fetch-toast','✗ Please select both From and To dates',false); return; }
+
+  const btn  = document.getElementById('btn-fetch');
+  const spin = document.getElementById('fetch-spin');
+  const lbl  = document.getElementById('fetch-label');
+  const prog = document.getElementById('fetch-progress');
+  btn.disabled=true; spin.style.display='block'; lbl.textContent='Fetching...'; prog.style.display='block';
+
+  try {
+    const r = await fetch('/api/device/fetch', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ from: new Date(from).toISOString(), to: new Date(to).toISOString() }),
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('fetch-toast',`✓ Fetched ${d.count} records and stored to disk`,true); loadStatus(); loadLogs(1); }
+    else showToast('fetch-toast',`✗ ${d.error}`,false);
+  } catch(err) { showToast('fetch-toast',`✗ ${err.message}`,false); }
+  finally { btn.disabled=false; spin.style.display='none'; lbl.textContent='📥 Fetch & Store'; prog.style.display='none'; }
+}
+
+// ── CSV Download ──────────────────────────────────────────────────────────
+async function downloadCsv() {
+  const from = document.getElementById('dl-from').value;
+  const to   = document.getElementById('dl-to').value;
+  if (!from||!to) { showToast('dl-toast','✗ Please select both dates',false); return; }
+  const url = `/api/logs/download?from=${encodeURIComponent(new Date(from).toISOString())}&to=${encodeURIComponent(new Date(to).toISOString())}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+    const blob    = await resp.blob();
+    const blobUrl = URL.createObjectURL(new Blob([blob],{type:'text/csv'}));
+    const a = document.createElement('a');
+    a.href=blobUrl; a.download=`logs_${from.slice(0,10)}_to_${to.slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(blobUrl);
+    showToast('dl-toast','✓ Download started',true);
+  } catch(err) { showToast('dl-toast',`✗ ${err.message}`,false); }
+}
+
+// ── Logs Table ────────────────────────────────────────────────────────────
+let allRecords = []; // full dataset for client-side filtering
+
+async function loadLogs(page=1) {
+  currentPage = Math.max(1,page);
+  try {
+    const d = await fetch(`/api/logs?page=1&limit=5000`).then(r=>r.json());
+    allRecords = d.records || [];
+  } catch(e) {
+    allRecords = [];
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const nameQ   = (document.getElementById('filter-name')?.value   || '').toLowerCase().trim();
+  const idQ     = (document.getElementById('filter-id')?.value     || '').trim();
+  const accessQ = (document.getElementById('filter-access')?.value || '');
+  const dateQ   = (document.getElementById('filter-date')?.value   || '');
+  const maskQ   = (document.getElementById('filter-mask')?.value   || '');
+
+  const filtered = allRecords.filter(r => {
+    if (nameQ   && !(r.PersonName||'').toLowerCase().includes(nameQ)) return false;
+    if (idQ     && !(r.PersonCode||'').includes(idQ))                 return false;
+    if (accessQ && r.AccessGranted !== accessQ)                       return false;
+    if (maskQ   && r.Mask !== maskQ)                                  return false;
+    if (dateQ) {
+      // Compare date portion of Timestamp
+      const recDate = r.Timestamp ? r.Timestamp.split(',')[0] : '';
+      const filterDate = new Date(dateQ).toLocaleDateString('en-US');
+      if (recDate !== filterDate) return false;
+    }
+    return true;
+  });
+
+  const hasFilter = nameQ || idQ || accessQ || dateQ || maskQ;
+  document.getElementById('filter-info').style.display = hasFilter ? 'block' : 'none';
+
+  renderTable(filtered, currentPage);
+}
+
+function clearFilters() {
+  ['filter-name','filter-id'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['filter-access','filter-mask'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const fd = document.getElementById('filter-date'); if(fd) fd.value='';
+  document.getElementById('filter-info').style.display='none';
+  renderTable(allRecords, 1);
+}
+
+function renderTable(records, page=1) {
+  currentPage = Math.max(1, page);
+  const body = document.getElementById('logs-body');
+  const pag  = document.getElementById('pagination');
+
+  if (!records.length) {
+    body.innerHTML=`<div class="empty"><div class="icon">${allRecords.length ? '🔍' : '📭'}</div><p>${allRecords.length ? 'No records match your filters' : 'No logs stored — fetch from device above'}</p></div>`;
+    pag.style.display='none'; return;
+  }
+
+  const totalPages = Math.ceil(records.length/LIMIT);
+  currentPage = Math.min(currentPage, totalPages);
+  const slice = records.slice((currentPage-1)*LIMIT, currentPage*LIMIT);
+
+  const rows = slice.map(r=>`<tr>
+    <td>${esc(r.Timestamp||'—')}</td>
+    <td>${esc(r.PersonCode||'—')}</td>
+    <td style="font-family:var(--sans);font-weight:500">${esc(r.PersonName||'—')}</td>
+    <td><span class="badge ${r.AccessGranted==='Yes'?'yes':'no'}">${esc(r.AccessGranted||'—')}</span></td>
+    <td>${esc(r.Temperature??'—')}</td>
+    <td>${esc(r.Mask||'—')}</td>
+    <td style="color:var(--muted)">${esc(r.Detail||'—')}</td>
+  </tr>`).join('');
+
+  body.innerHTML=`<table><thead><tr><th>Timestamp</th><th>ID</th><th>Name</th><th>Access</th><th>Temp °C</th><th>Mask</th><th>Detail</th></tr></thead><tbody>${rows}</tbody></table>`;
+
+  document.getElementById('page-info').textContent=`Page ${currentPage} of ${totalPages}`;
+  document.getElementById('total-info').textContent=`${records.length.toLocaleString()} of ${allRecords.length.toLocaleString()} records`;
+  document.getElementById('btn-prev').disabled=currentPage<=1;
+  document.getElementById('btn-next').onclick=()=>renderTable(records, currentPage+1);
+  document.getElementById('btn-prev').onclick=()=>renderTable(records, currentPage-1);
+  document.getElementById('btn-next').disabled=currentPage>=totalPages;
+  pag.style.display='flex';
+}
+
+
+
+// ── Clear Local Logs ──────────────────────────────────────────────────────
+async function clearActiveLogs() {
+  const dev = getActiveDevice();
+  const name = dev ? dev.name : 'this device';
+  if (!confirm(`Clear all locally stored logs for "${name}"?
+This does NOT affect logs on the device itself.`)) return;
+  try {
+    const r = await fetch('/api/logs/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: dev?.id }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      loadStatus();
+      loadLogs(1);
+      showToast('fetch-toast', `✓ Local logs cleared for "${name}"`, true);
+    } else {
+      alert('Error: ' + d.error);
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function showToast(id,msg,ok){ const el=document.getElementById(id); el.textContent=msg; el.className=`toast ${ok?'ok':'err'}`; el.style.display='block'; setTimeout(()=>el.style.display='none',6000); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────
+const now=new Date(), sod=new Date(now); sod.setHours(0,0,0,0);
+const fmt=d=>d.toISOString().slice(0,16);
+document.getElementById('fetch-from').value=fmt(sod);
+document.getElementById('fetch-to').value=fmt(now);
+document.getElementById('dl-from').value=fmt(sod);
+document.getElementById('dl-to').value=fmt(now);
+
+renderDeviceList();
+// Sync active device to server first, then load logs
+const _initDev = getActiveDevice();
+if (_initDev) {
+  fetch('/api/devices/active', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(_initDev),
+  }).then(() => { loadStatus(); loadLogs(1); });
+} else {
+  loadStatus();
+  loadLogs(1);
+}
+</script>
+</body>
+</html>
