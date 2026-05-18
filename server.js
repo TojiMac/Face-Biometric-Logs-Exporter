@@ -211,7 +211,7 @@ app.get('/api/logs/download', (req, res) => {
   records.sort((a,b) => (a.TimestampUnix||0)-(b.TimestampUnix||0));
   const esc = v => { const s=String(v??''); return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:''+s; };
   const headers = ['Index','Timestamp','ID','Name','Access Granted','Body Temperature','Mask Detection','Details'];
-  const rows    = records.map((r,i) => [i+1,r.Timestamp||'',r.PersonCode||'',r.PersonName||'',r.AccessGranted||'',r.Temperature??'',r.Mask||'',r.Detail||''].map(esc).join(','));
+  const rows    = records.map((r,i) => [i+1,r.Timestamp||'',r.PersonCode||'',r.PersonName||'',r.AccessGranted||'',r.Temperature??'',r.Mask||'',r.Detail ? `Detection Type:Face Detection    Result:${r.Detail}` : ''].map(esc).join(','));
   const csv     = [headers.join(','), ...rows].join('\r\n');
   const fromStr = start.toISOString().slice(0,10), toStr = end.toISOString().slice(0,10);
   const devName = (activeDevice.name||activeDevice.host).replace(/[^a-zA-Z0-9]/g,'_');

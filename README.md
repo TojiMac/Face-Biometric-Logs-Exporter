@@ -114,7 +114,7 @@ Matches the device's own Backup export exactly:
 
 | Index | Timestamp | ID | Name | Access Granted | Body Temperature | Mask Detection | Details |
 |-------|-----------|----|----|----------------|-----------------|----------------|---------|
-| 1 | 5/6/2026, 8:28:51 AM | 831962 | Yemen E. Cureg | Yes | 36.6 | Without Mask | Access Success |
+| 1 | 5/6/2026, 8:28:51 AM | 831962 | Juan Dela | Yes | 36.6 | Without Mask | Access Success |
 
 ---
 
